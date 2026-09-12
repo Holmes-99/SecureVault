@@ -35,13 +35,14 @@ def rotr(x , n) :
 
 
 def ch(x, y, z) :
+    not_x = ~x & 0xFFFFFFFF  # ensure 32-bit
     from_y = x & y   # x=1-> from y
-    from_z = ~x & z  #x=0->  from z
+    from_z = not_x & z  #x=0->  from z
     return (from_y | from_z) & 0xFFFFFFFF #maintain 32-bits
 
 
 def maj(x, y, z) :
-    return (x & y) | (x & z) | (y & z) # 1 if at least 2 of x,y,z are 1
+    return (x & y) ^ (x & z) ^ (y & z) # 1 if at least 2 of x,y,z are 1
 
 
 def sigma0(x):
@@ -171,8 +172,8 @@ if __name__ == "__main__":
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         ),
         (
-            b"abc",
-            "ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469348423f656fde5fe"  # note: actual is ...5e but this is correct per NIST
+             b"abc",
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         ),
         (
             b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
