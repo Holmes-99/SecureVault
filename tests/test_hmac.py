@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'client'))
 
-from crypto.hmac import hmac_sha256, hmac_sha256_hex
+from crypto.hmac_sha256 import hmac_sha256, hmac_sha256_hex
 
 
 def ref(key, msg):
