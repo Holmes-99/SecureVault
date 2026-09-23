@@ -95,7 +95,6 @@ def test_password_hashing_use_case():
     assert result == hashlib.sha256(salt + password).digest()
 
 def test_document_signing_use_case():
-    # how sha256 gets used inside ecdsa before signing
     ciphertext = os.urandom(1024)
     aad = b'{"filename": "thesis.pdf", "size": 1024, "owner": "layla"}'
     digest = sha256(ciphertext + aad)
