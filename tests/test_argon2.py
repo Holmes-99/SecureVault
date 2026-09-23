@@ -3,7 +3,18 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'client'))
 
 import pytest
-from crypto.argon2 import argon2id, argon2id_encode, argon2id_verify
+from crypto import argon2 as _argon2
+from crypto.argon2 import argon2id_verify
+
+#the pure-python implementation takes ~30s per hash at default params,
+#so tests use minimal costs -- they check behaviour, not strength
+FAST = dict(time_cost=1, memory_cost=8)
+
+def argon2id(password, salt, **kw):
+    return _argon2.argon2id(password, salt, **{**FAST, **kw})
+
+def argon2id_encode(password, **kw):
+    return _argon2.argon2id_encode(password, **{**FAST, **kw})
 
 
 def test_output_is_32_bytes():
@@ -79,15 +90,15 @@ def test_different_time_cost_different_output():
 
 def test_different_memory_cost_different_output():
     salt = b'fixedsalt1234567'
-    h1 = argon2id(b'password', salt, memory_cost=32)
-    h2 = argon2id(b'password', salt, memory_cost=64)
+    h1 = argon2id(b'password', salt, memory_cost=8)
+    h2 = argon2id(b'password', salt, memory_cost=16)
     assert h1 != h2
 
 def test_encoded_params_roundtrip():
     #verify that params encoded correctly
-    encoded = argon2id_encode(b'pass', time_cost=2, memory_cost=32)
+    encoded = argon2id_encode(b'pass', time_cost=2, memory_cost=8)
     assert 't=2' in encoded
-    assert 'm=32' in encoded
+    assert 'm=8' in encoded
     assert argon2id_verify(b'pass', encoded) is True
 
 def test_wrong_password_returns_false_not_raises():
