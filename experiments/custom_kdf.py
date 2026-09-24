@@ -1,7 +1,13 @@
+#experiment: our own memory-hard KDF, inspired by Argon2id
+#NOT the real Argon2id from RFC 9106 (uses HMAC-SHA256 instead of Blake2b
+#and a simpler mixing step), so its output does not match the RFC vectors.
+#we keep it only to measure how slow pure python is -- the system uses
+#argon2-cffi instead (see client/crypto/password_hash.py)
+
 import os
 import sys
 import struct
-sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'client', 'crypto'))
 from hmac_sha256 import hmac_sha256
 
 
@@ -128,7 +134,7 @@ def argon2id(password, salt, time_cost=TIME_COST, memory_cost=MEMORY_COST,
 def argon2id_encode(password, salt=None, time_cost=TIME_COST,
                     memory_cost=MEMORY_COST, parallelism=PARALLELISM, hash_len=HASH_LEN):
     #returns PHC-style string for DB storage
-    #format: $argon2id$v=19$m=<mem>,t=<time>,p=<par>$<salt_b64>$<hash_b64>
+    #format: $sv-kdf$v=1$m=<mem>,t=<time>,p=<par>$<salt_b64>$<hash_b64>
     import base64
     if salt is None:
         salt = os.urandom(SALT_LEN)
@@ -138,7 +144,7 @@ def argon2id_encode(password, salt=None, time_cost=TIME_COST,
     salt_b64 = base64.b64encode(salt).decode().rstrip('=')
     hash_b64 = base64.b64encode(h).decode().rstrip('=')
 
-    return f"$argon2id$v=19$m={memory_cost},t={time_cost},p={parallelism}${salt_b64}${hash_b64}"
+    return f"$sv-kdf$v=1$m={memory_cost},t={time_cost},p={parallelism}${salt_b64}${hash_b64}"
 
 
 def argon2id_verify(password, encoded):
@@ -146,8 +152,8 @@ def argon2id_verify(password, encoded):
     import base64
 
     parts = encoded.split('$')
-    # ['', 'argon2id', 'v=19', 'm=64,t=3,p=1', '<salt>', '<hash>']
-    assert parts[1] == 'argon2id', "not an argon2id hash"
+    # ['', 'sv-kdf', 'v=1', 'm=64,t=3,p=1', '<salt>', '<hash>']
+    assert parts[1] == 'sv-kdf', "not an sv-kdf hash"
 
     params = {}
     for kv in parts[3].split(','):

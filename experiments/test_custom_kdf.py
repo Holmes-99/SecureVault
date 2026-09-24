@@ -1,10 +1,10 @@
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'client'))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import pytest
-from crypto import argon2 as _argon2
-from crypto.argon2 import argon2id_verify
+import custom_kdf as _argon2
+from custom_kdf import argon2id_verify
 
 #the pure-python implementation takes ~30s per hash at default params,
 #so tests use minimal costs -- they check behaviour, not strength
@@ -50,9 +50,9 @@ def test_encode_returns_string():
     encoded = argon2id_encode(b'password')
     assert isinstance(encoded, str)
 
-def test_encode_starts_with_argon2id():
+def test_encode_starts_with_prefix():
     encoded = argon2id_encode(b'password')
-    assert encoded.startswith('$argon2id$')
+    assert encoded.startswith('$sv-kdf$')
 
 def test_verify_correct_password():
     encoded = argon2id_encode(b'mypassword')
