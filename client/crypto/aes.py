@@ -46,6 +46,15 @@ def gf_mul(a, b):
         b >>= 1
     return result & 0xFF
 
+#lookup tables built once with gf_mul -- mix_columns was calling gf_mul
+#hundreds of times per block, which made AES (and GCM) very slow
+MUL2  = [gf_mul(0x02, x) for x in range(256)]
+MUL3  = [gf_mul(0x03, x) for x in range(256)]
+MUL9  = [gf_mul(0x09, x) for x in range(256)]
+MUL11 = [gf_mul(0x0b, x) for x in range(256)]
+MUL13 = [gf_mul(0x0d, x) for x in range(256)]
+MUL14 = [gf_mul(0x0e, x) for x in range(256)]
+
 def key_expansion(key):
     assert len(key) == 32
 
@@ -135,10 +144,10 @@ def mix_columns(state):
         s1 = state[1][col]
         s2 = state[2][col]
         s3 = state[3][col]
-        state[0][col] = gf_mul(0x02,s0) ^ gf_mul(0x03,s1) ^ s2 ^ s3
-        state[1][col] = s0 ^ gf_mul(0x02,s1) ^ gf_mul(0x03,s2) ^ s3
-        state[2][col] = s0 ^ s1 ^ gf_mul(0x02,s2) ^ gf_mul(0x03,s3)
-        state[3][col] = gf_mul(0x03,s0) ^ s1 ^ s2 ^ gf_mul(0x02,s3)
+        state[0][col] = MUL2[s0] ^ MUL3[s1] ^ s2 ^ s3
+        state[1][col] = s0 ^ MUL2[s1] ^ MUL3[s2] ^ s3
+        state[2][col] = s0 ^ s1 ^ MUL2[s2] ^ MUL3[s3]
+        state[3][col] = MUL3[s0] ^ s1 ^ s2 ^ MUL2[s3]
     return state
 
 def inv_mix_columns(state):
@@ -147,18 +156,20 @@ def inv_mix_columns(state):
         s1 = state[1][col]
         s2 = state[2][col]
         s3 = state[3][col]
-        state[0][col] = gf_mul(0x0e,s0) ^ gf_mul(0x0b,s1) ^ gf_mul(0x0d,s2) ^ gf_mul(0x09,s3)
-        state[1][col] = gf_mul(0x09,s0) ^ gf_mul(0x0e,s1) ^ gf_mul(0x0b,s2) ^ gf_mul(0x0d,s3)
-        state[2][col] = gf_mul(0x0d,s0) ^ gf_mul(0x09,s1) ^ gf_mul(0x0e,s2) ^ gf_mul(0x0b,s3)
-        state[3][col] = gf_mul(0x0b,s0) ^ gf_mul(0x0d,s1) ^ gf_mul(0x09,s2) ^ gf_mul(0x0e,s3)
+        state[0][col] = MUL14[s0] ^ MUL11[s1] ^ MUL13[s2] ^ MUL9[s3]
+        state[1][col] = MUL9[s0] ^ MUL14[s1] ^ MUL11[s2] ^ MUL13[s3]
+        state[2][col] = MUL13[s0] ^ MUL9[s1] ^ MUL14[s2] ^ MUL11[s3]
+        state[3][col] = MUL11[s0] ^ MUL13[s1] ^ MUL9[s2] ^ MUL14[s3]
     return state
 
 
-def aes_encrypt_block(key, block):
+def aes_encrypt_block(key, block, round_keys=None):
     assert len(key) == 32, "AES-256 needs a 32-byte key"
     assert len(block) == 16, "AES block must be 16 bytes"
 
-    round_keys = key_expansion(key)
+    #callers encrypting many blocks (like GCM) pass round_keys to expand the key only once
+    if round_keys is None:
+        round_keys = key_expansion(key)
     state = bytes_to_state(block)
 
     state = add_round_key(state, round_keys[0]) #initial round

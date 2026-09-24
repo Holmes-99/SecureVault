@@ -1,7 +1,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
-from aes import aes_encrypt_block
+from aes import aes_encrypt_block, key_expansion
 
 
 def gf_mul_128(X, Y):
@@ -63,9 +63,10 @@ def _inc32(counter_block):
 def ctr_encrypt(key, initial_counter, data):
     result = bytearray()
     counter = initial_counter
+    round_keys = key_expansion(key)  #expand once, reuse for every block
 
     for i in range(0, len(data), 16):
-        keystream = aes_encrypt_block(key, counter)
+        keystream = aes_encrypt_block(key, counter, round_keys)
         block = data[i:i+16]
         for j in range(len(block)):
             result.append(block[j] ^ keystream[j])
