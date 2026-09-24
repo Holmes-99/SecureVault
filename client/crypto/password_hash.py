@@ -5,7 +5,7 @@ from argon2.low_level import hash_secret_raw, Type
 #pure python was too slow to reach a real memory cost (see experiments/custom_kdf.py)
 
 TIME_COST = 3        #passes over memory
-MEMORY_COST = 65536  #in KiB -> 64 MiB
+MEMORY_COST = 393216 #in KiB -> 384 MiB, ~0.46s per hash (tools/bench_password_hash.py)
 PARALLELISM = 4      #lanes
 HASH_LEN = 32        #output bytes
 SALT_LEN = 16        #random salt per user, stored in the clear
