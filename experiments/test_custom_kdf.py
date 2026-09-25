@@ -6,8 +6,7 @@ import pytest
 import custom_kdf as _argon2
 from custom_kdf import argon2id_verify
 
-#the pure-python implementation takes ~30s per hash at default params,
-#so tests use minimal costs -- they check behaviour, not strength
+
 FAST = dict(time_cost=1, memory_cost=8)
 
 def argon2id(password, salt, **kw):
@@ -38,6 +37,7 @@ def test_different_passwords_different_output():
     assert h1 != h2
 
 def test_different_salts_different_output():
+    
     h1 = argon2id(b'password', b'saltsaltsalt1111')
     h2 = argon2id(b'password', b'saltsaltsalt2222')
     assert h1 != h2
@@ -112,4 +112,4 @@ def test_salt_too_short_raises():
 
 def test_password_must_be_bytes():
     with pytest.raises(AssertionError):
-        argon2id('password', b'saltsaltsalt1234')  # str not bytes
+        argon2id('password', b'saltsaltsalt1234')
