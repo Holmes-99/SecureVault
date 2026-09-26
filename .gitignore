@@ -6,3 +6,5 @@ __pycache__/
 .pytest_cache/
 .venv/
 server_data/
+client_data/
+downloads/
