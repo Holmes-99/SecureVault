@@ -29,6 +29,17 @@
 
 We picked 384 MiB, the closest to our 0.5 s target. When adding cost we chose more memory rather than more passes, because memory is what hurts GPUs.
 
+**Offline attack, estimated** (`tools/crack_estimate.py`): the attacker has one account's salt and `auth_key`, and every guess costs a full Argon2id. On one high-end GPU (~1 TB/s memory bandwidth, 24 GiB; assumed), each guess moves about 3.4 GiB of memory, so the GPU can do at most ~276 guesses/s, and only 64 fit in memory at once. Average time to find the password:
+
+| Password | Our Argon2id | Bare SHA-256 (~22 billion/s) |
+|---|---|---|
+| 8 lowercase + digits | ~160 years | ~1 minute |
+| 8 letters + digits | ~12,500 years | ~1.4 hours |
+| 10 letters + digits | ~48 million years | ~220 days |
+| one of the top 1,000,000 passwords | ~30 minutes | instant |
+
+Each account has its own salt, so all of this is paid again per account. A common password still falls fast (last row), which is a limitation.
+
 **Why a library:** our own pure-Python version (`experiments/custom_kdf.py`, not real Argon2id) took 3.6 s for just 8 KiB. At a real memory size, one login would take hours.
 
 **Rejected:**
@@ -71,7 +82,16 @@ Both give about 128-bit security, with 32-byte keys.
 
 **Rejected:** P-256 (see above), RSA-3072 (384-byte keys for the same security), finite-field DH (needs about 3072 bits).
 
-**To do:** measure ECC against RSA at the same security level.
+**ECC vs RSA, measured** (`tools/bench_ecc_vs_rsa.py`, same 128-bit level, both from OpenSSL so we compare algorithms, not code quality):
+
+| Operation | Curve25519 | RSA-3072 | RSA / ECC |
+|---|---|---|---|
+| key generation | 0.08 ms | 734 ms | ~8,900x |
+| key agreement / transport | 0.14 ms | 10 ms | ~73x |
+| sign | 0.10 ms | 10 ms | ~100x |
+| verify | 0.25 ms | 0.24 ms | ~1x |
+
+Keys are 32 B instead of 384 B, and signatures 64 B instead of 384 B. RSA verification is as fast as ours or faster, because it uses a small public exponent (65537). That doesn't change our choice: every signup generates keys, and every share does a key agreement and a signature. With our own pure-Python code against RSA using the same Python big integers, the picture is the same (key agreement ~45x, sign ~14x, verify faster for RSA).
 
 ---
 
@@ -125,7 +145,7 @@ A replayed message is real: Layla actually signed it. A signature proves *who* s
 | Where | Mechanism | Rejects |
 |---|---|---|
 | requests to the server | timestamp + 16-byte nonce, signed | older than 5 min, or a nonce already seen |
-| documents | version number inside the signed statement | a version ≤ the last one accepted, shown as **stale** |
+| documents | version number inside the signed statement | a version lower than the last one accepted, or the same version but a different object; shown as **stale**. Downloading the very same copy again is allowed. |
 | login | fresh random challenge, answered with HMAC(auth_key) | a recorded old login |
 
 The server only keeps nonces from the last 5 minutes. Anything older is already rejected by the timestamp.
