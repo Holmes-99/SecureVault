@@ -71,6 +71,19 @@ def make_grant(doc, dek, plaintext, sender, sender_ed25519_sk, recipient, recipi
 
 # recipient's side
 
+def unwrap_grant(grant, my_x25519_sk):
+    #X25519 + HKDF --> wrap key --> open the grant --> (DEK, signature)
+    #the owner also uses it to get the DEK back when sharing
+    try:
+        shared = x25519.shared_secret(my_x25519_sk, grant.ephemeral_pk)
+        my_pk = x25519.public_key(my_x25519_sk)
+        wrap_key = _wrap_key(shared, grant.ephemeral_pk, my_pk)
+        sealed = gcm_decrypt(wrap_key, grant.nonce, grant.sealed, grant.tag, grant_header(grant))
+    except ValueError:
+        raise Rejected(MODIFIED)
+    return sealed[:32], sealed[32:]
+
+
 def open_document(doc, grant, my_username, my_x25519_sk, sender_ed25519_pk, last_seen=None):
     #returns (plaintext, signature) or raises a rejection with a message
     #last_seen = (version, fingerprint) of the newest copy this client already accepted
@@ -81,14 +94,7 @@ def open_document(doc, grant, my_username, my_x25519_sk, sender_ed25519_pk, last
         raise Rejected(MODIFIED)
 
     #unwrap the DEK +signature
-    try:
-        shared = x25519.shared_secret(my_x25519_sk, grant.ephemeral_pk)
-        my_pk = x25519.public_key(my_x25519_sk)
-        wrap_key = _wrap_key(shared, grant.ephemeral_pk, my_pk)
-        sealed = gcm_decrypt(wrap_key, grant.nonce, grant.sealed, grant.tag, grant_header(grant))
-    except ValueError:
-        raise Rejected(MODIFIED)
-    dek, signature = sealed[:32], sealed[32:]
+    dek, signature = unwrap_grant(grant, my_x25519_sk)
 
     #decrypt 
     try:
