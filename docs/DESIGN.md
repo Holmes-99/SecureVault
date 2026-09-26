@@ -203,11 +203,34 @@ Wrapping key = HKDF-SHA256(X25519(temporary, recipient), salt = temporary_pk ‖
 |---|---|---|---|---|---|
 | LV | 16 | 32 | 32 | 32 | 12 + 64 + 16 |
 
-**Request frame.** The signature covers every field before it.
+**Request frame.** The signature covers everything from `type` to `body`, not the length.
 
 | length | type | username | timestamp | nonce | body | signature |
 |---|---|---|---|---|---|---|
 | 4 | 1 | LV | 8 | 16 | varies | 64 |
+
+**Server reply**
+
+| length | status (0 = OK, 1 = error) | payload |
+|---|---|---|
+| 4 | 1 | varies |
+
+**Message types** (`shared/protocol.py`). The three login messages are sent before the user has keys, so their signature field is all zeros and isn't checked. Every other message must be signed.
+
+| # | Message | Signed | Body --> reply |
+|---|---|---|---|
+| 1 | REGISTER | with the new key | user record --> - |
+| 2 | GET_SALT | no | - --> salt (a fake one for unknown users) |
+| 3 | LOGIN_START | no | - --> 32-byte challenge |
+| 4 | LOGIN_PROOF | no | HMAC --> salt, key blob, public keys |
+| 10 | GET_KEYS | yes | username --> Ed25519 pk + X25519 pk |
+| 11 | UPLOAD | yes | document + grant for myself --> - |
+| 12 | SHARE | yes | grant --> - |
+| 13 | LIST | yes | - --> my documents |
+| 14 | DOWNLOAD | yes | doc_id + version --> document + my grant |
+| 15 | CHANGE_PASSWORD | yes | new user record --> - |
+
+Big fields in a body (document, grant) are each prefixed by a 4-byte length.
 
 ### When verification fails
 The client doesn't show or save anything, and doesn't tell the server why it failed. The user sees one short line:
@@ -221,7 +244,7 @@ The client doesn't show or save anything, and doesn't tell the server why it fai
 
 It never gives more detail than that, such as which byte or which check failed.
 
-The server's replies travel over the network, so they stay generic. A failed login always gets `Invalid username or password`. For an unknown username, the server returns a fake salt, `HMAC(server_secret, username)`, and does the same work, so the reply and its timing look the same.
+The server's replies travel over the network, so they stay generic. A failed login always gets `Invalid username or password`. For an unknown username, the server returns a fake salt, the first 16 bytes of `HMAC(server_secret, "fake salt" || username)`, and does the same work, so the reply and its timing look the same.
 
 ---
 
@@ -236,6 +259,12 @@ DEK          locks  the document
 ```
 
 **Two keys, not one:** the server holds `auth_key`. If that same key unlocked the private keys, the server could read everything.
+
+**Exact derivations** (`client/keys.py`):
+- `auth_key` = HKDF(master, salt = none, info = "SecureVault auth key v1")
+- `enc_key` = HKDF(master, salt = none, info = "SecureVault enc key v1")
+- key blob = AES-GCM(`enc_key`, x25519_sk ‖ ed25519_sk), with AAD = "SVU1" ‖ LV(username), so a blob can't be moved to another account
+- login answer = HMAC(`auth_key`, "SecureVault login v1" ‖ challenge)
 
 **Password change:**
 1. The old password unlocks the private keys.
@@ -257,7 +286,7 @@ Rejected: session tokens, because the attacker sees the network and could steal 
 | Argon2id | `argon2-cffi` | pure Python is too slow for a real memory cost |
 
 Not counted as crypto: `os.urandom`, sockets, storage, UI.
-`cryptography` is used only in tests, to cross-check our code.
+`cryptography` is never used by the running system. It's used in tests to cross-check our code, and in `tools/bench_ecc_vs_rsa.py` to measure RSA for the comparison.
 
 ## Limitations
 
@@ -269,6 +298,8 @@ Not counted as crypto: `os.urandom`, sockets, storage, UI.
 - A forgotten password loses the private keys and every document. A recovery key would fix this.
 - Changing the password doesn't protect against an old stolen database copy if the old password gets cracked. Key rotation would fix this.
 - The server sees file names, sizes, times, and who shares with whom.
+- Sign-up says when a name is taken, and a logged-in user can ask for anyone's public keys, so account names aren't secret. We only hide whether an account exists on a *failed login*, which is what the spec asks for.
+- Sharing needs one extra step compared to "name him and the system does the rest": the recipient must be verified with the safety number first. That's the price of not trusting the server with public keys.
 
 ## References
 
