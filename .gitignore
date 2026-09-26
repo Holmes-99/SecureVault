@@ -5,3 +5,4 @@ __pycache__/
 *.key
 .pytest_cache/
 .venv/
+server_data/
