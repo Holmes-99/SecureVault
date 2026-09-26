@@ -81,7 +81,7 @@ Both give about 128-bit security, with 32-byte keys.
 
 **Choice** (the same idea as WhatsApp's security code):
 1. The first time Layla gets Omar's key, her client saves it.
-2. Both clients show the same 12-digit safety number, computed from both public keys.
+2. Both clients show the same 20-digit safety number (5 groups of 4), computed with SHA-256 from both users' names and public keys. We use 20 digits and not 12 because 12 digits is only about 40 bits: an attacker could generate fake keys until one gives the same number. 20 digits is about 66 bits, which is far too many keys to try.
 3. They compare it by phone or in person, then mark each other as verified.
 4. **Sharing is blocked until the recipient is verified.**
 5. If a saved key ever changes, the client blocks. There's no "continue anyway".
