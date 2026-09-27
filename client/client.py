@@ -218,8 +218,8 @@ class VaultClient:
                            recipient, x_pk)
         self.call(p.SHARE, encode_grant(grant))
 
-    def download(self, doc_id_hex, out_dir="downloads"):
-        #returns (saved path, sender, sender verified?) or raises Rejected
+    def open_latest(self, doc_id_hex):
+        #fetch + every check --> (doc, plaintext, signature, sender verified?)
         self.need_login()
         doc_id = self.resolve(doc_id_hex)
         wanted = self.latest(doc_id)
@@ -230,20 +230,36 @@ class VaultClient:
         last = seen.get(doc_id.hex())
         last_seen = (last[0], bytes.fromhex(last[1])) if last else None
 
-        plaintext, _ = open_document(doc, grant, self.username, self.keys.x25519_sk,
-                                     sender_ed_pk, last_seen)
+        plaintext, signature = open_document(doc, grant, self.username, self.keys.x25519_sk,
+                                             sender_ed_pk, last_seen)
         #the server said there is a newer one than what we got
         if doc.version < wanted:
             raise Rejected(STALE)
 
         seen[doc_id.hex()] = [doc.version, fingerprint(doc).hex()]
         save_json(self.local("seen"), seen)
+        return doc, plaintext, signature, verified
 
+    def download(self, doc_id_hex, out_dir="downloads"):
+        #returns (saved path, sender, sender verified?) or raises Rejected
+        doc, plaintext, _, verified = self.open_latest(doc_id_hex)
         #only the base name -- a file called "../../x" can't escape the folder
         out = Path(out_dir) / Path(doc.filename).name
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(plaintext)
         return out, doc.owner, verified
+
+    def prove(self, doc_id_hex, out_dir="downloads"):
+        #proof for a third party: file + metadata + the sender's signature
+        doc, plaintext, signature, _ = self.open_latest(doc_id_hex)
+        sender_ed_pk, _, _ = self.their_keys(doc.owner)
+        out = Path(out_dir) / (Path(doc.filename).name + ".proof.json")
+        save_json(out, {"sender": doc.owner, "recipient": self.username,
+                        "sender_ed25519": sender_ed_pk.hex(),
+                        "document": encode_document(doc).hex(),
+                        "signature": signature.hex()})
+        (Path(out_dir) / Path(doc.filename).name).write_bytes(plaintext)
+        return out
 
 
 # command line
@@ -253,7 +269,7 @@ HELP = """commands:
   contact <user>           verify <user>
   upload <file>            update <doc> <file>
   list                     share <doc> <user>     download <doc>
-  passwd                   help                   quit
+  prove <doc>              passwd                 help      quit
 (<doc> = the first few characters of the id shown by list)"""
 
 
@@ -312,6 +328,10 @@ def shell(client):
                 print(f"OK: file is intact and was signed by {sender}"
                       f"{'' if verified else ' (NOT verified -- compare safety numbers)'}")
                 print(f"saved to {path}")
+            elif cmd == "prove":
+                path = client.prove(args[0])
+                print(f"proof saved to {path}")
+                print("anyone can check it: python tools/verify_proof.py <proof> <file>")
             else:
                 print("unknown command, type help")
         except Rejected as e:
