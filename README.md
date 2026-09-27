@@ -69,10 +69,6 @@ Attacker commands: `mode pass`, `mode flip`, `mode rename`, `mode replay`, `mode
 
 ## Demo steps
 
-**One click:** double-click `run_demo.bat` (or run `python tools/run_demo.py --wire --pause`). It starts a server, the attacker and two users, goes through every step below, and shows what the attacker sees on the network at each step. Press Enter to move on.
-
-Or do it by hand:
-
 | # | What we show | How |
 |---|---|---|
 | 1 | two users sign up | `signup layla` in one client, `signup omar` in the other |
