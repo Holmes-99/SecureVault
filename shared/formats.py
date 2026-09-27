@@ -1,9 +1,5 @@
 from dataclasses import dataclass
 
-# byte formats for everything we store or send
-# no crypto happens here -- this file only turns objects into bytes and back,
-# so that both sides build EXACTLY the same bytes to sign / authenticate
-
 class FormatError(Exception):
     pass
 
@@ -77,7 +73,7 @@ class Reader:
             raise FormatError("unexpected extra bytes")
 
 
-# --- document object (stored on the server, one per version) ---
+#  document object
 
 DOC_MAGIC = b"SVD1"
 
@@ -95,7 +91,7 @@ class Document:
     tag: bytes = b""     #16
 
 def document_header(doc):
-    #everything before the nonce -- this is the AAD of the document's GCM
+    #everything before the nonce
     return (DOC_MAGIC +
             fixed(doc.doc_id, 16, "doc_id") +
             lv(doc.owner) + lv(doc.filename) + lv(doc.mime) +
@@ -119,10 +115,9 @@ def decode_document(data):
     return doc
 
 
-# --- key grant (the DEK locked for one recipient, plus the signature) ---
 
 GRANT_MAGIC = b"SVK1"
-SEALED_LEN = 96      #DEK (32) + Ed25519 signature (64), encrypted
+SEALED_LEN = 96    
 
 @dataclass
 class KeyGrant:
@@ -130,13 +125,12 @@ class KeyGrant:
     version: int
     sender: str
     recipient: str
-    ephemeral_pk: bytes  #32, the temporary X25519 public key
-    nonce: bytes = b""   #12
-    sealed: bytes = b""  #96
-    tag: bytes = b""     #16
+    ephemeral_pk: bytes #32
+    nonce: bytes = b"" #12
+    sealed: bytes = b"" #96
+    tag: bytes = b"" #16
 
 def grant_header(grant):
-    #everything before the nonce -- this is the AAD of the grant's GCM
     return (GRANT_MAGIC +
             fixed(grant.doc_id, 16, "doc_id") + u32(grant.version) +
             lv(grant.sender) + lv(grant.recipient) +
@@ -160,12 +154,10 @@ def decode_grant(data):
     return grant
 
 
-# --- signed statement (what the sender signs; never stored on its own) ---
 
 STATEMENT_MAGIC = b"SVS1"
 
 def signed_statement(doc_id, version, sender, recipient, metadata_hash, plaintext_hash):
-    #metadata_hash = SHA-256(document_header), plaintext_hash = SHA-256(file)
     return (STATEMENT_MAGIC +
             fixed(doc_id, 16, "doc_id") + u32(version) +
             lv(sender) + lv(recipient) +
@@ -173,18 +165,17 @@ def signed_statement(doc_id, version, sender, recipient, metadata_hash, plaintex
             fixed(plaintext_hash, 32, "plaintext_hash"))
 
 
-# --- user record (stored on the server) ---
 
-KEY_BLOB_LEN = 12 + 64 + 16   #nonce + encrypted (x25519 sk + ed25519 sk) + tag
+KEY_BLOB_LEN = 12 + 64 + 16 
 
 @dataclass
 class UserRecord:
     username: str
-    salt: bytes          #16
-    auth_key: bytes      #32
-    x25519_pk: bytes     #32
-    ed25519_pk: bytes    #32
-    key_blob: bytes      #92
+    salt: bytes          
+    auth_key: bytes      
+    x25519_pk: bytes     
+    ed25519_pk: bytes 
+    key_blob: bytes
 
 def encode_user(user):
     return (lv(user.username) +
@@ -203,18 +194,16 @@ def decode_user(data):
     return user
 
 
-# --- request frame (every signed request after login) ---
-# length | type | username | timestamp | nonce | body | signature
-# the signature covers everything between the length and the signature
+
 
 @dataclass
 class Request:
     msg_type: int
     username: str
     timestamp: int
-    nonce: bytes         #16
+    nonce: bytes #16
     body: bytes
-    signature: bytes = b""   #64
+    signature: bytes = b"" #64
 
 def request_signed_part(req):
     return (u8(req.msg_type) + lv(req.username) + u64(req.timestamp) +
