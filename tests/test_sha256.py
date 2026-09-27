@@ -86,8 +86,7 @@ def test_large_input():
 
 # --- securevault use cases ---
 
-def test_password_hashing_use_case():
-    # how sha256 gets used inside argon2id
+def test_salt_and_password_input():
     password = b"Layla@BirZeit2026"
     salt = os.urandom(16)
     result = sha256(salt + password)

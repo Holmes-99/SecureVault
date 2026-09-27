@@ -105,7 +105,7 @@ def test_hkdf_extract_use_case():
     assert len(prk) == 32
     assert prk == ref(salt, shared_secret)
 
-def test_argon2_mixing_use_case():
+def test_1kb_message():
     key = os.urandom(32)
     block_data = os.urandom(1024)
     tag = hmac_sha256(key, block_data)
