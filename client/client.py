@@ -63,7 +63,7 @@ class VaultClient:
         if self.keys is None:
             raise ClientError("log in first")
 
-    # local files (per user): pinned keys + last version seen of each doc
+    # local files (per user)
 
     def local(self, name):
         return self.data_dir / self.username / f"{name}.json"
@@ -219,7 +219,7 @@ class VaultClient:
         self.call(p.SHARE, encode_grant(grant))
 
     def open_latest(self, doc_id_hex):
-        #fetch + every check --> (doc, plaintext, signature, sender verified?)
+        #fetch + every check 
         self.need_login()
         doc_id = self.resolve(doc_id_hex)
         wanted = self.latest(doc_id)
@@ -241,16 +241,16 @@ class VaultClient:
         return doc, plaintext, signature, verified
 
     def download(self, doc_id_hex, out_dir="downloads"):
-        #returns (saved path, sender, sender verified?) or raises Rejected
+        #returns (saved path, sender, sender verified?) or  Rejected
         doc, plaintext, _, verified = self.open_latest(doc_id_hex)
-        #only the base name -- a file called "../../x" can't escape the folder
+        #only the base name 
         out = Path(out_dir) / Path(doc.filename).name
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(plaintext)
         return out, doc.owner, verified
 
     def prove(self, doc_id_hex, out_dir="downloads"):
-        #proof for a third party: file + metadata + the sender's signature
+        #proof for a third party: file + metadata +signature
         doc, plaintext, signature, _ = self.open_latest(doc_id_hex)
         sender_ed_pk, _, _ = self.their_keys(doc.owner)
         out = Path(out_dir) / (Path(doc.filename).name + ".proof.json")

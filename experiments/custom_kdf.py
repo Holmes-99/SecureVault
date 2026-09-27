@@ -1,8 +1,3 @@
-#experiment: our own memory-hard KDF, inspired by Argon2id
-#NOT the real Argon2id from RFC 9106 (uses HMAC-SHA256 instead of Blake2b
-#and a simpler mixing step), so its output does not match the RFC vectors.
-#we keep it only to measure how slow pure python is -- the system uses
-#argon2-cffi instead (see client/crypto/password_hash.py)
 
 import os
 import sys
@@ -11,23 +6,20 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'client', 'cryp
 from hmac_sha256 import hmac_sha256
 
 
-#Argon2id parameters (RFC 9106)
-TIME_COST = 3       #number of passes over memory
-MEMORY_COST = 64    #number of 1KB blocks (use 65536 in prod)
-PARALLELISM = 1     #single lane
-HASH_LEN = 32       #output length in bytes
-SALT_LEN = 16       #salt length in bytes
-BLOCK_SIZE = 1024   #each block is 1024 bytes
+#Argon2id parameters
+TIME_COST = 3  
+MEMORY_COST = 64 
+PARALLELISM = 1  
+HASH_LEN = 32  
+SALT_LEN = 16
+BLOCK_SIZE = 1024 
 
 
 def _h(data):
-    #variable-length hash via HMAC-SHA256 (replaces Blake2b in standard Argon2)
     return hmac_sha256(b'argon2-sv', data)
 
 
 def _h_prime(out_len, data):
-    #variable-length output (RFC 9106 section 3.2)
-    #chains HMAC-SHA256 blocks to produce out_len bytes
     if out_len <= 32:
         return _h(out_len.to_bytes(4, 'little') + data)[:out_len]
 
@@ -55,22 +47,20 @@ def _le32(x):
 
 
 def _mix_block(block_a, block_b):
-    #mix two 1024-byte blocks using HMAC-SHA256 as compression function
-    #replaces the G function (Blake2b) from the RFC
+   
     combined = bytes(a ^ b for a, b in zip(block_a, block_b))
 
     result = bytearray()
     for i in range(0, BLOCK_SIZE, 32):
         chunk = combined[i:i+32]
-        mixed = hmac_sha256(chunk, combined) #each chunk mixed with full state
+        mixed = hmac_sha256(chunk, combined)
         result += mixed
 
-    return bytes(x ^ y for x, y in zip(result, block_a)) #XOR with block_a (Argon2 feedback)
+    return bytes(x ^ y for x, y in zip(result, block_a)) 
 
 
 def _index_alpha(pass_num, slice_num, block_idx, pseudo_rand, memory_cost):
-    #compute reference block index (RFC 9106 section 3.3)
-    #Argon2id: first two slices of pass 0 -> data-independent, rest -> data-dependent
+   
     if pass_num == 0 and slice_num < 2:
         reference_area_size = block_idx - 1 if block_idx > 0 else 0
     else:
@@ -87,22 +77,20 @@ def argon2id(password, salt, time_cost=TIME_COST, memory_cost=MEMORY_COST,
     assert isinstance(password, bytes), "password must be bytes"
     assert isinstance(salt, bytes) and len(salt) >= 8, "salt must be at least 8 bytes"
 
-    #stage 1: produce H0 (64 bytes) -- binds all parameters to the output
     h0_input = (
         _le32(parallelism) +
         _le32(hash_len) +
         _le32(memory_cost) +
         _le32(time_cost) +
-        _le32(0x13) +           #version 1.3
-        _le32(2) +              #type: Argon2id
+        _le32(0x13) + 
+        _le32(2) +   
         _le32(len(password)) + password +
         _le32(len(salt))     + salt +
-        _le32(0) +              #no secret
-        _le32(0)                #no associated data
+        _le32(0) +           
+        _le32(0)             
     )
     H0 = _h_prime(64, h0_input)
 
-    #stage 2: initialize memory matrix
     B = [None] * memory_cost
 
     B[0] = _h_prime(BLOCK_SIZE, H0 + _le32(0) + _le32(0))
@@ -112,7 +100,6 @@ def argon2id(password, salt, time_cost=TIME_COST, memory_cost=MEMORY_COST,
     for i in range(2, memory_cost):
         B[i] = _h_prime(BLOCK_SIZE, B[i-1] + B[0])
 
-    #stage 3: time_cost passes -- mix blocks
     for t in range(time_cost):
         for i in range(memory_cost):
             pseudo_rand = int.from_bytes(B[i][:8], 'little')
@@ -123,7 +110,6 @@ def argon2id(password, salt, time_cost=TIME_COST, memory_cost=MEMORY_COST,
             ref = B[j]
             B[i] = _mix_block(prev, ref)
 
-    #stage 4: finalize -- XOR all blocks then hash
     final_block = B[0]
     for i in range(1, memory_cost):
         final_block = bytes(a ^ b for a, b in zip(final_block, B[i]))
@@ -133,8 +119,6 @@ def argon2id(password, salt, time_cost=TIME_COST, memory_cost=MEMORY_COST,
 
 def argon2id_encode(password, salt=None, time_cost=TIME_COST,
                     memory_cost=MEMORY_COST, parallelism=PARALLELISM, hash_len=HASH_LEN):
-    #returns PHC-style string for DB storage
-    #format: $sv-kdf$v=1$m=<mem>,t=<time>,p=<par>$<salt_b64>$<hash_b64>
     import base64
     if salt is None:
         salt = os.urandom(SALT_LEN)
@@ -148,11 +132,9 @@ def argon2id_encode(password, salt=None, time_cost=TIME_COST,
 
 
 def argon2id_verify(password, encoded):
-    #parse encoded string and check password
     import base64
 
     parts = encoded.split('$')
-    # ['', 'sv-kdf', 'v=1', 'm=64,t=3,p=1', '<salt>', '<hash>']
     assert parts[1] == 'sv-kdf', "not an sv-kdf hash"
 
     params = {}
@@ -173,7 +155,6 @@ def argon2id_verify(password, encoded):
                         parallelism=params['p'],
                         hash_len=hash_len)
 
-    #constant-time comparison
     diff = 0
     for a, b in zip(computed, expected_hash):
         diff |= a ^ b
