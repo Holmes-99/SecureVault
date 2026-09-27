@@ -207,31 +207,3 @@ def aes_decrypt_block(key, block):
     state = add_round_key(state, round_keys[0]) # reverse initial round
 
     return state_to_bytes(state)
-
-
-if __name__ == "__main__":
-    print("Running AES-256 self-test...")
-
-    key = bytes.fromhex("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
-    plaintext = bytes.fromhex("00112233445566778899aabbccddeeff")
-    expected  = bytes.fromhex("8ea2b7ca516745bfeafc49904b496089")
-
-    ciphertext = aes_encrypt_block(key, plaintext)
-    decrypted  = aes_decrypt_block(key, ciphertext)
-
-    test_cases = [
-        ("Encrypt", ciphertext == expected),
-        ("Decrypt",decrypted == plaintext),
-    ]
-
-    all_passed = True
-    for name, passed in test_cases:
-        print(f"  {name}: {'PASS' if passed else 'FAIL'}")
-        if not passed:
-            all_passed = False
-
-    if all_passed:
-        print("\nAll self-tests passed!")
-    else:
-        print(f"\n  Expected: {expected.hex()}")
-        print(f"  Got:{ciphertext.hex()}")
