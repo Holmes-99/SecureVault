@@ -207,3 +207,18 @@ def test_pinned_keys_saved_locally(world):
     layla.contact("omar")
     pinned = json.loads((layla.data_dir / "layla" / "pinned.json").read_text())
     assert pinned["omar"]["verified"] is False
+
+
+# third-party proof (non-repudiation)
+
+def test_prove_and_verify(world):
+    from tools.verify_proof import check
+    doc_id = shared_doc(world)
+    omar, tmp = world[2], world[4]
+    proof_path = omar.prove(doc_id, tmp / "proof")
+    proof = json.loads(proof_path.read_text())
+    plaintext = (tmp / "proof" / "thesis-draft.pdf").read_bytes()
+    assert check(proof, plaintext) is True
+    assert check(proof, plaintext + b"x") is False
+    proof["recipient"] = "mallory"
+    assert check(proof, plaintext) is False
