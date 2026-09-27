@@ -107,3 +107,11 @@ def test_resent_request_is_refused(net):
     layla = client("layla")
     layla.list()                                #a signed request goes by
     assert attacker.resend() == REJECTED
+
+def test_rename_to_any_name_is_detected(net):
+    attacker, client, thesis, tmp = net
+    layla, omar, doc_id = shared(client, thesis)
+    attacker.mode, attacker.new_name = "rename", "exam-answers.pdf"
+    with pytest.raises(Rejected) as e:
+        omar.download(doc_id, tmp / "out")
+    assert str(e.value) == MODIFIED
