@@ -12,24 +12,19 @@ from crypto import x25519, ed25519
 from shared.formats import decode_request, decode_document, encode_document, FormatError
 from shared import protocol as p
 
-# ============================================================
-#   ATTACKER -- FOR THE DEMO ONLY
-#   a network attacker that sits between our client and OUR
-#   OWN local server. never point it at anything else.
-# ============================================================
-#
-# flow
+
+
 # client --> attacker (:5051) --> server (:5050)
 #        <-- attacker changes the answer here <--
 #
-# modes
-#   pass     forward everything untouched
-#   flip     flip one byte of the downloaded ciphertext     (demo 6)
-#   rename   change the file name in the metadata           (demo 7)
-#   replay   answer with an older copy it recorded before   (demo 8)
-#   swapkey  hand out the attacker's keys instead (MITM)    (key trust)
-# command
-#   resend   send the last captured signed request again    (server freshness)
+#      modes
+#   pass:forward everything untouched
+#   flip: flip one byte of the downloaded ciphertext   
+#   rename: change the file name in the metadata  
+#   replay: answer with an older copy it recorded before
+#   swapkey: hand out the attacker's keys instead (MWITM) 
+# command;
+#   resend: send the last captured signed request again    (server freshness)
 
 MODES = ["pass", "flip", "rename", "replay", "swapkey"]
 
@@ -40,10 +35,10 @@ class Attacker:
         self.mode = "pass"
         self.quiet = quiet
         self.lock = threading.Lock()
-        self.recorded = {}        #(user, doc_id) -> {version: download answer}
-        self.last_signed = None   #last signed request seen on the wire
+        self.recorded = {}  #(user, doc_id) 
+        self.last_signed = None   #last request seen 
 
-        #the attacker's own keys, used for the swap
+        #the attacker keys
         self.fake_ed_pk = ed25519.public_key(ed25519.generate_private_key())
         self.fake_x_pk = x25519.public_key(x25519.generate_private_key())
 
@@ -51,7 +46,7 @@ class Attacker:
         if not self.quiet:
             print(f"[attacker] {text}")
 
-    # look at the request on its way to the server
+    # look at the request going to the server
 
     def on_request(self, frame):
         try:
@@ -60,10 +55,10 @@ class Attacker:
             return None, None
         if req.msg_type not in p.UNSIGNED:
             with self.lock:
-                self.last_signed = frame   #captured, can be replayed later
+                self.last_signed = frame#can be replayed later
         return req.msg_type, req.username
 
-    # change the answer on its way back
+    # change the answer when its coming back
 
     def on_response(self, msg_type, username, frame):
         status, payload = p.decode_response(frame)
@@ -84,7 +79,7 @@ class Attacker:
         doc_bytes, grant_bytes = p.unpack(payload, 2)
         doc = decode_document(doc_bytes)
 
-        #always record what passes by (each user's copy has their own grant)
+
         copies = self.recorded.setdefault((username, doc.doc_id), {})
         copies.setdefault(doc.version, payload)
 
@@ -112,7 +107,7 @@ class Attacker:
 
         return payload
 
-    # replay a captured request straight to the server
+    # replay a captured request
 
     def resend(self):
         with self.lock:
@@ -127,7 +122,7 @@ class Attacker:
         return answer
 
 
-# network: one upstream connection per client connection
+# network--> one upstream connection per client connection
 
 class ProxyHandler(socketserver.BaseRequestHandler):
     def handle(self):
