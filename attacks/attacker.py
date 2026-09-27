@@ -33,6 +33,7 @@ class Attacker:
     def __init__(self, target, quiet=False):
         self.target = target
         self.mode = "pass"
+        self.new_name = "final-approved.pdf"   #used by rename
         self.quiet = quiet
         self.lock = threading.Lock()
         self.recorded = {}  #(user, doc_id) 
@@ -95,7 +96,7 @@ class Attacker:
 
         if mode == "rename":
             old = doc.filename
-            doc.filename = "final-approved.pdf"
+            doc.filename = self.new_name
             self.log(f"renamed '{old}' --> '{doc.filename}'")
             return p.pack(encode_document(doc), grant_bytes)
 
@@ -170,6 +171,11 @@ def main():
         if line[0] == "quit":
             break
         elif line[0] == "mode" and len(line) == 2 and line[1] in MODES:
+            if line[1] == "rename":
+                name = ""
+                while not name:   #ask again until a name is given
+                    name = input("new file name: ").strip()
+                attacker.new_name = name
             attacker.mode = line[1]
         elif line[0] == "resend":
             attacker.resend()
