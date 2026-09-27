@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 from cryptography.hazmat.primitives import serialization
 from crypto.ed25519 import public_key, sign, verify, generate_private_key, L
 
-#rfc 8032 section 7.1 test vectors
+#rfc test vectors
 RFC_VECTORS = [
     (  #empty message
         "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
@@ -80,7 +80,7 @@ def test_wrong_public_key_rejected():
     assert verify(public_key(generate_private_key()), msg, sig) is False
 
 def test_non_canonical_s_rejected():
-    #S + L is same mod L but rfc 8032 says reject it
+    #S + L is same mod L --> rfc 8032 says reject it
     sk, pk, msg, sig = setup()
     S = int.from_bytes(sig[32:], 'little') + L
     if S < 2**256:
@@ -92,6 +92,6 @@ def test_bad_lengths_rejected():
     assert verify(pk[:31], msg, sig) is False
 
 def test_same_message_same_signature():
-    #deterministic: no random r so same inputs always give same output
+    #no random r
     sk, pk, msg, sig = setup()
     assert sign(sk, msg) == sig

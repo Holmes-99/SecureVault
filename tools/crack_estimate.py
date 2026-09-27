@@ -9,39 +9,33 @@ from crypto.password_hash import hash_password, new_salt, MEMORY_COST, TIME_COST
 
 # how long would an offline attack on a stolen credential store take?
 # the attacker has the salt + auth_key of an account and guesses passwords.
-# every guess = one full Argon2id with our parameters (then a cheap HKDF).
-#
-# measured here: our Argon2id time, SHA-256 speed on this CPU
-# assumed: one high-end GPU (numbers below, check them before the report)
-# run: python tools/crack_estimate.py
+# every guess = one full Argon2id with our parameters (then HKDF).
 
-# --- assumptions about the attacker's GPU (RTX 4090 class) ---
-GPU_MEMORY = 24 * 2**30          #24 GiB of memory
-GPU_BANDWIDTH = 1.0e12           #~1 TB/s memory bandwidth
-GPU_SHA256 = 2.2e10              #~22 billion SHA-256/s (public hashcat benchmark, approx)
 
-# Argon2id touches its memory about 3 times per pass (read 2 blocks, write 1)
+# the attacker's GPU 
+GPU_MEMORY = 24 * 2**30  
+GPU_BANDWIDTH = 1.0e12        
+GPU_SHA256 = 2.2e10              
+
 ARGON2_TRAFFIC = 3 * MEMORY_COST * 1024 * TIME_COST   #bytes moved per guess
 
 
 # password spaces the attacker has to search
 SPACES = [
     ("8 lowercase + digits",  36 ** 8),
-    ("8 letters + digits",    62 ** 8),
-    ("10 letters + digits",   62 ** 10),
-    ("top 1,000,000 common",  10 ** 6),
+    ("8 letters + digits",62 ** 8),
+    ("10 letters + digits",62 ** 10),
+    ("top 1,000,000 common",10 ** 6),
 ]
 
 
 def measured_argon2():
-    #seconds for one real hash on this machine
     start = time.perf_counter()
     hash_password(b"guess", new_salt())
     return time.perf_counter() - start
 
 
-def measured_sha256():
-    #SHA-256 per second on one CPU core (hashlib, C code)
+def measured_sha256():#per second
     n = 200_000
     start = time.perf_counter()
     for i in range(n):
@@ -50,7 +44,7 @@ def measured_sha256():
 
 
 def gpu_argon2_rate():
-    #upper bound: limited by memory bandwidth, and by how many guesses fit in memory
+    #u limited by memory bandwidth
     by_bandwidth = GPU_BANDWIDTH / ARGON2_TRAFFIC
     fits_in_memory = GPU_MEMORY // (MEMORY_COST * 1024)
     return by_bandwidth, fits_in_memory
@@ -89,5 +83,5 @@ if __name__ == "__main__":
     print_table("C) bare SHA-256, one CPU core (measured here)", sha_rate)
 
     print("\nnotes")
-    print("  - every account has its own salt, so the attacker pays this again per account")
+    print("  -- every account has its own salt, so the attacker pays this again per account")
     print("  - a password from a common list still falls quickly (last row)")
