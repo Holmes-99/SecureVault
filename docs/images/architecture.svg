@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="560" fill="#ffffff"/>
+
+  <text x="550" y="34" text-anchor="middle" font-size="20" font-weight="700" fill="#1f2328">SecureVault architecture</text>
+  <text x="550" y="56" text-anchor="middle" font-size="13" fill="#57606a">Files and private keys are encrypted on the client. The server still sees file names, sizes, times, and who shares with whom.</text>
+
+  <!-- Layla client -->
+  <rect x="30" y="90" width="270" height="300" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+  <text x="165" y="118" text-anchor="middle" font-size="16" font-weight="700" fill="#0969da">Client (Layla)</text>
+  <text x="165" y="136" text-anchor="middle" font-size="12" fill="#57606a">trusted, client/client.py</text>
+  <g font-size="12.5" fill="#1f2328">
+    <text x="48" y="166">password --Argon2id--&gt; master</text>
+    <text x="48" y="186">master --HKDF--&gt; auth_key, enc_key</text>
+    <text x="48" y="212">Private keys unlocked in memory only:</text>
+    <text x="60" y="230">X25519 (encryption)</text>
+    <text x="60" y="248">Ed25519 (signing)</text>
+    <text x="48" y="274">Per document:</text>
+    <text x="60" y="292">new random DEK</text>
+    <text x="60" y="310">AES-256-GCM(DEK, file),</text>
+    <text x="60" y="326">metadata as AAD</text>
+    <text x="48" y="352">Every request signed (Ed25519)</text>
+    <text x="48" y="370">+ timestamp + nonce</text>
+  </g>
+
+  <!-- Attacker -->
+  <rect x="380" y="150" width="200" height="180" rx="10" fill="#fff1f0" stroke="#cf222e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="480" y="178" text-anchor="middle" font-size="16" font-weight="700" fill="#cf222e">Attacker proxy</text>
+  <text x="480" y="196" text-anchor="middle" font-size="12" fill="#57606a">controls the network, :5051</text>
+  <g font-size="12.5" fill="#1f2328">
+    <text x="398" y="224">flip: change a byte</text>
+    <text x="398" y="244">rename: edit metadata</text>
+    <text x="398" y="264">replay: serve old version</text>
+    <text x="398" y="284">swapkey: fake public key</text>
+    <text x="398" y="304">resend: replay a request</text>
+  </g>
+
+  <!-- Server -->
+  <rect x="660" y="90" width="410" height="300" rx="10" fill="#f6f8fa" stroke="#57606a" stroke-width="1.5"/>
+  <text x="865" y="118" text-anchor="middle" font-size="16" font-weight="700" fill="#1f2328">Server (untrusted)</text>
+  <text x="865" y="136" text-anchor="middle" font-size="12" fill="#57606a">server/server.py, :5050</text>
+  <g font-size="12.5" fill="#1f2328">
+    <text x="678" y="166" font-weight="700">Stores</text>
+    <text x="678" y="186">salt + auth_key (no passwords)</text>
+    <text x="678" y="204">private keys, encrypted with enc_key</text>
+    <text x="678" y="222">public keys (X25519, Ed25519)</text>
+    <text x="678" y="240">documents: AES-256-GCM ciphertext + tag</text>
+    <text x="678" y="258">key grants: DEK + signature, sealed per recipient</text>
+    <text x="678" y="288" font-weight="700">Checks</text>
+    <text x="678" y="308">login challenge (HMAC), request signatures,</text>
+    <text x="678" y="326">timestamps, one-time nonces</text>
+    <text x="678" y="356" fill="#cf222e"><tspan font-weight="700">Cannot:</tspan> read files, learn passwords, or forge</text>
+    <text x="678" y="374" fill="#cf222e">documents or requests</text>
+  </g>
+
+  <!-- arrows -->
+  <line x1="300" y1="240" x2="376" y2="240" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <line x1="580" y1="240" x2="656" y2="240" stroke="#57606a" stroke-width="2" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <text x="340" y="230" text-anchor="middle" font-size="11" fill="#57606a">TCP</text>
+  <text x="618" y="230" text-anchor="middle" font-size="11" fill="#57606a">TCP</text>
+
+  <!-- Omar client -->
+  <rect x="30" y="420" width="1040" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/>
+  <text x="550" y="446" text-anchor="middle" font-size="16" font-weight="700" fill="#1a7f37">Recipient client (Omar): what happens on download</text>
+  <g font-size="12.5" fill="#1f2328">
+    <text x="50" y="474">1. X25519 + HKDF rebuild the wrap key and open the grant, giving the DEK and Layla's signature</text>
+    <text x="50" y="494">2. AES-GCM tag check over ciphertext + metadata: any flipped byte or renamed file gives "document was modified"</text>
+    <text x="50" y="514">3. Ed25519 signature check (pinned key, verified by safety number) proves who sent it</text>
+    <text x="50" y="532">4. Version compared with the last one seen: an older copy gives "stale version"</text>
+  </g>
+  <line x1="865" y1="390" x2="865" y2="416" stroke="#57606a" stroke-width="2" marker-end="url(#arr)"/>
+</svg>

@@ -8,3 +8,4 @@ __pycache__/
 server_data/
 client_data/
 downloads/
+.vscode/

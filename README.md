@@ -1,24 +1,43 @@
 # SecureVault
 
+[![tests](https://github.com/Holmes-99/SecureVault/actions/workflows/tests.yml/badge.svg)](https://github.com/Holmes-99/SecureVault/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Our final project for ENCS4320 (Applied Cryptography) at Birzeit University.
 
 SecureVault lets users upload documents to a server they don't trust and share them with each other. The server stores everything but can't read any of it, and the client checks every file it gets back (content, metadata, sender and version) before opening it.
 
+> [!WARNING]
+> **Educational project. Do not use it to protect real data.**
+> We implemented SHA-256/512, HMAC, HKDF, AES, GCM, X25519 and Ed25519 ourselves to learn how they work. The code passes the official test vectors, but it has not been audited, is not constant-time, and is far slower than production libraries. For real systems, use a vetted library such as `cryptography` or libsodium.
+
+![SecureVault architecture](docs/images/architecture.svg)
+
 ## Team
 
-| Name | Student ID |
+| Name | GitHub |
 |---|---|
-| Shatha Abualrob | 1231279 |
-| Lara Daifallah | 1230239 |
-| Razan Shalabi | 1230874 |
+| Shatha Abualrub | [@Holmes-99](https://github.com/Holmes-99) |
+| Lara Daifallah | [@LaraDaifallah](https://github.com/LaraDaifallah) |
+| Razan Shalabi | [@Razan-Shalabi](https://github.com/Razan-Shalabi) |
 
 ## Setup
 
 You need Python 3.12 or newer. From the project folder:
 
+Windows (PowerShell):
+
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -69,6 +88,10 @@ Attacker commands: `mode pass`, `mode flip`, `mode rename`, `mode replay`, `mode
 
 ## Demo steps
 
+Real output from the attacker proxy and the recipient's client while the attacker tampers with a shared file:
+
+![Attack demo: the client rejects a flipped byte, a renamed file and a replayed old version](docs/images/attack-demo.png)
+
 | # | What we show | How |
 |---|---|---|
 | 1 | two users sign up | `signup layla` in one client, `signup omar` in the other |
@@ -106,7 +129,7 @@ Put the attacker back on `mode pass` between steps.
 | `attacks/` | attacker and weakened build (only for our own system) |
 | `tools/` | benchmarks and helper scripts |
 | `tests/` | the tests |
-| `docs/` | DESIGN.md (decisions and byte formats) |
+| `docs/` | DESIGN.md (decisions and byte formats), README images |
 | `report/` | the report |
 | `slides/` | the presentation |
 | `experiments/` | our first try at a password KDF, not used anymore |
@@ -126,3 +149,7 @@ Nothing secret is in the repo. It's all created locally when you run the program
 | `downloads/` | the client | files you downloaded (decrypted) |
 
 Private keys are never saved in plain form. They're stored on the server encrypted with a key that comes from your password, and only unlocked in memory after you log in.
+
+## License
+
+Released under the [MIT License](LICENSE). See the warning at the top: this code is for learning, not for protecting real data.
