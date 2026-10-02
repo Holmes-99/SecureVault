@@ -108,7 +108,8 @@ def generate_private_key():
 
 
 def public_key(private_key):
-    assert len(private_key) == 32, "private key must be 32 bytes"
+    if len(private_key) != 32:
+        raise ValueError("private key must be 32 bytes")
     a, _ = _expand_private(private_key)
     return encode_point(scalar_mult(a, BASE))
 

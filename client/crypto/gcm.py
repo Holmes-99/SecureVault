@@ -76,13 +76,16 @@ def ctr_encrypt(key, initial_counter, data):
 
 
 def make_j0(nonce):
-    assert len(nonce) == 12, "nonce must be 12 bytes"
+    if len(nonce) != 12:
+        raise ValueError("nonce must be 12 bytes")
     return nonce + b'\x00\x00\x00\x01'
 
 
 def gcm_encrypt(key, nonce, plaintext, aad):
-    assert len(key) == 32, "AES-256 key must be 32 bytes"
-    assert len(nonce) == 12, "GCM nonce must be 12 bytes"
+    if len(key) != 32:
+        raise ValueError("AES-256 key must be 32 bytes")
+    if len(nonce) != 12:
+        raise ValueError("GCM nonce must be 12 bytes")
 
     # hash subkey H = AES_K(0^128)
     H = aes_encrypt_block(key, b'\x00' * 16)
@@ -99,9 +102,12 @@ def gcm_encrypt(key, nonce, plaintext, aad):
 
 
 def gcm_decrypt(key, nonce, ciphertext, tag, aad):
-    assert len(key) == 32, "AES-256 key must be 32 bytes"
-    assert len(nonce) == 12, "GCM nonce must be 12 bytes"
-    assert len(tag) == 16, "GCM tag must be 16 bytes"
+    if len(key) != 32:
+        raise ValueError("AES-256 key must be 32 bytes")
+    if len(nonce) != 12:
+        raise ValueError("GCM nonce must be 12 bytes")
+    if len(tag) != 16:
+        raise ValueError("GCM tag must be 16 bytes")
 
     H = aes_encrypt_block(key, b'\x00' * 16)
     J0 = make_j0(nonce)

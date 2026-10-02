@@ -93,7 +93,8 @@ def pad(message) :
 #2nd stage: process each 512-bit chunk
 def process_chunk(chunk, hash_values):
    
-    assert len(chunk) == 64, f"Chunk must be 64 bytes, got {len(chunk)}"
+    if len(chunk) != 64:
+        raise ValueError(f"Chunk must be 64 bytes, got {len(chunk)}")
 
     W = []
     for i in range(16):

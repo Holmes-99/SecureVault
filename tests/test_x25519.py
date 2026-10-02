@@ -71,5 +71,5 @@ def test_zero_public_key_rejected():
         shared_secret(generate_private_key(), b'\x00' * 32)
 
 def test_wrong_length_rejected():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         x25519(b'\x01' * 31, b'\x09' + b'\x00' * 31)

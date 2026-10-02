@@ -56,7 +56,8 @@ MUL13 = [gf_mul(0x0d, x) for x in range(256)]
 MUL14 = [gf_mul(0x0e, x) for x in range(256)]
 
 def key_expansion(key):
-    assert len(key) == 32
+    if len(key) != 32:
+        raise ValueError("AES-256 needs a 32-byte key")
 
     # split key into 8 x 4-byte words
     words = []
@@ -164,8 +165,10 @@ def inv_mix_columns(state):
 
 
 def aes_encrypt_block(key, block, round_keys=None):
-    assert len(key) == 32, "AES-256 needs a 32-byte key"
-    assert len(block) == 16, "AES block must be 16 bytes"
+    if len(key) != 32:
+        raise ValueError("AES-256 needs a 32-byte key")
+    if len(block) != 16:
+        raise ValueError("AES block must be 16 bytes")
 
     #callers encrypting many blocks (like GCM) pass round_keys to expand the key only once
     if round_keys is None:
@@ -188,8 +191,10 @@ def aes_encrypt_block(key, block, round_keys=None):
 
 
 def aes_decrypt_block(key, block):
-    assert len(key) == 32, "AES-256 needs a 32-byte key"
-    assert len(block) == 16, "AES block must be 16 bytes"
+    if len(key) != 32:
+        raise ValueError("AES-256 needs a 32-byte key")
+    if len(block) != 16:
+        raise ValueError("AES block must be 16 bytes")
 
     round_keys = key_expansion(key)
     state= bytes_to_state(block)

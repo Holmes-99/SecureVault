@@ -74,8 +74,10 @@ def scalar_mult(k, u):
 
 
 def x25519(private_key, u_bytes):
-    assert len(private_key) == 32, "private key must be 32 bytes"
-    assert len(u_bytes) == 32, "public key must be 32 bytes"
+    if len(private_key) != 32:
+        raise ValueError("private key must be 32 bytes")
+    if len(u_bytes) != 32:
+        raise ValueError("public key must be 32 bytes")
     return encode_u(scalar_mult(clamp(private_key), decode_u(u_bytes)))
 
 
