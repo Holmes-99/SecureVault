@@ -209,9 +209,13 @@ class VaultClient:
             raise ClientError(f"verify {recipient} first (compare the safety number)")
 
         #open my own copy to get the file and its DEK back
-        doc, my_grant = self.fetch(doc_id, self.latest(doc_id))
+        wanted = self.latest(doc_id)
+        doc, my_grant = self.fetch(doc_id, wanted)
         plaintext, _ = open_document(doc, my_grant, self.username, self.keys.x25519_sk,
                                      self.record.ed25519_pk)
+        #an older copy here would mean sharing a stale version without noticing
+        if doc.version < wanted:
+            raise Rejected(STALE)
         dek, _ = unwrap_grant(my_grant, self.keys.x25519_sk)
 
         grant = make_grant(doc, dek, plaintext, self.username, self.keys.ed25519_sk,
