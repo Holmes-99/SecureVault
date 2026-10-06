@@ -82,7 +82,9 @@ class Attacker:
 
 
         copies = self.recorded.setdefault((username, doc.doc_id), {})
-        copies.setdefault(doc.version, payload)
+        if doc.version not in copies:
+            copies[doc.version] = payload
+            self.log(f"recorded '{doc.filename}' v{doc.version} for {username}")
 
         if mode == "flip":
             b = bytearray(doc.ciphertext or doc.tag)
