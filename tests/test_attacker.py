@@ -87,6 +87,18 @@ def test_replay_is_stale(net):
         omar.download(doc_id, tmp / "out")
     assert str(e.value) == STALE
 
+def test_replay_while_sharing_is_stale(net):
+    attacker, client, thesis, tmp = net
+    layla, omar, doc_id = shared(client, thesis)  #layla's share fetched v1, so it is recorded
+
+    thesis.write_bytes(b"%PDF-1.7 fixed version")
+    layla.update(doc_id, thesis)
+
+    attacker.mode = "replay"
+    with pytest.raises(Rejected) as e:
+        layla.share(doc_id, "omar")             #attacker hands layla her old v1
+    assert str(e.value) == STALE
+
 def test_swapped_key_shows_different_safety_number(net):
     attacker, client, thesis, tmp = net
     layla, omar = client("layla"), client("omar")
