@@ -43,14 +43,21 @@ def style_app(root):
 
 
 class App:
-    def __init__(self, root, host, port, data_dir):
+    def __init__(self, root, host, port, data_dir, side=None):
         self.root = root
         self.host, self.port, self.data_dir = host, port, data_dir
         self.client = None
         self.results = queue.Queue()
+        self.compact = side is not None
         root.title("SecureVault")
-        root.geometry("1120x640")
-        root.minsize(1040, 560)
+        if side:
+            #demo: two clients side by side, each on half the screen
+            w, h = root.winfo_screenwidth() // 2, root.winfo_screenheight() - 90
+            root.geometry(f"{w}x{h}+{0 if side == 'left' else w}+0")
+            root.minsize(640, 480)
+        else:
+            root.geometry("1120x640")
+            root.minsize(1040, 560)
         style_app(root)
         self.body = ttk.Frame(root)
         self.body.pack(fill="both", expand=True)
@@ -138,6 +145,7 @@ class App:
 
     def show_main(self):
         self.root.unbind("<Return>")
+        self.root.title(f"SecureVault - {self.client.username}")
         self.clear()
         top = ttk.Frame(self.body, padding=(20, 16, 20, 8))
         top.pack(fill="x")
@@ -150,7 +158,7 @@ class App:
         main.pack(fill="both", expand=True)
 
         #contacts
-        side = ttk.Frame(main, style="Soft.TFrame", padding=14, width=250)
+        side = ttk.Frame(main, style="Soft.TFrame", padding=14, width=185 if self.compact else 250)
         side.pack(side="left", fill="y")
         side.pack_propagate(False)
         ttk.Label(side, text="Contacts", font=(FONT, 12, "bold"), background=SOFT).pack(anchor="w")
@@ -169,14 +177,24 @@ class App:
         bar = ttk.Frame(docs)
         bar.pack(fill="x", pady=(0, 8))
         ttk.Label(bar, text="Documents", font=(FONT, 12, "bold")).pack(side="left")
-        for text, cmd, st in [("Refresh", self.refresh, "TButton"), ("Prove", self.prove, "TButton"),
-                              ("Download", self.download, "TButton"), ("Share", self.share, "Pink.TButton"),
-                              ("New version", self.new_version, "TButton"), ("Upload", self.upload, "Pink.TButton")]:
-            ttk.Button(bar, text=text, style=st, command=cmd).pack(side="right", padx=(6, 0))
+        buttons = [("Refresh", self.refresh, "TButton"), ("Prove", self.prove, "TButton"),
+                   ("Download", self.download, "TButton"), ("Share", self.share, "Pink.TButton"),
+                   ("New version", self.new_version, "TButton"), ("Upload", self.upload, "Pink.TButton")]
+        if self.compact:
+            #half-screen window: buttons in two rows of three
+            for row_buttons in (buttons[3:], buttons[:3]):
+                row = ttk.Frame(docs)
+                row.pack(fill="x", pady=(0, 6))
+                for text, cmd, st in reversed(row_buttons):
+                    ttk.Button(row, text=text, style=st, command=cmd).pack(side="left", fill="x", expand=True, padx=(0, 4))
+        else:
+            for text, cmd, st in buttons:
+                ttk.Button(bar, text=text, style=st, command=cmd).pack(side="right", padx=(6, 0))
 
         cols = ("name", "version", "owner", "size", "date")
         self.table = ttk.Treeview(docs, columns=cols, show="headings", selectmode="browse")
-        for c, w in zip(cols, (260, 70, 110, 90, 150)):
+        widths = (150, 55, 70, 70, 110) if self.compact else (260, 70, 110, 90, 150)
+        for c, w in zip(cols, widths):
             self.table.heading(c, text=c.upper(), anchor="w")
             self.table.column(c, width=w, anchor="w")
         self.table.pack(fill="both", expand=True)
@@ -367,10 +385,11 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5050)
     parser.add_argument("--data", default="client_data")
+    parser.add_argument("--side", choices=["left", "right"], help="half-screen window for the demo")
     args = parser.parse_args()
 
     root = tk.Tk()
-    App(root, args.host, args.port, args.data)
+    App(root, args.host, args.port, args.data, args.side)
     root.mainloop()
 
 

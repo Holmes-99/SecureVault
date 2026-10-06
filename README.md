@@ -66,7 +66,7 @@ Each program goes in its own terminal:
 | GUI client | `python client/gui.py` | same as the client, with windows |
 | attacker | `python attacks/attacker.py` | demo only, sits on port 5051 |
 
-To go through the attacker, start the clients with `--port 5051`.
+To go through the attacker, start the clients with `--port 5051`. For the demo, `--side left` and `--side right` put two GUI windows side by side, e.g. `python client/gui.py --port 5051 --side left`.
 
 Client commands (type `help` to see them):
 
