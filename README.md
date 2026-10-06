@@ -13,6 +13,10 @@ SecureVault lets users upload documents to a server they don't trust and share t
 
 ![SecureVault architecture](docs/images/architecture.svg)
 
+## Demo
+
+▶️ [Watch the demo](https://drive.google.com/file/d/1FTbIxETZ7RjuhxpHSZO8-puomnyNXUFB/view): sign-up, sharing, and the attacker's flip, rename, replay and key swap getting rejected.
+
 ## Team
 
 | Name | GitHub |
