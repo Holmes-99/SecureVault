@@ -165,6 +165,11 @@ The server only keeps nonces from the last 5 minutes. Anything older is already 
 The spec says the attacker controls the network, and the proxy really does: it can flip a byte, edit metadata, replay a message or swap a key live.
 Rejected: a shared folder (the attack is just a hand-edited file) and peer-to-peer (extra work, nothing gained).
 
+**Programs:**
+- `client/client.py` (terminal) and `client/gui.py` (graphical) are two front ends for the same client logic.
+- `client prove <doc>` + `tools/verify_proof.py`: a third party checks the sender's signature with no account and no server.
+- `attacks/attacker.py` (network attacker) and `attacks/weakened_build.py` (a reused nonce and a skipped tag check, both broken on purpose) are demo only, aimed at our own system.
+
 **The server:** stores users and documents, relays keys and documents, and checks login challenges, signatures, timestamps and nonces.
 
 **What it can't do:**
