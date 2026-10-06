@@ -4,11 +4,6 @@
 
 **Encrypted document sharing on a server you don't trust.**
 
-[![tests](https://github.com/Holmes-99/SecureVault/actions/workflows/tests.yml/badge.svg)](https://github.com/Holmes-99/SecureVault/actions/workflows/tests.yml)
-![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
-![Crypto](https://img.shields.io/badge/crypto-written%20from%20scratch-B23A6A)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
 [Demo video](https://drive.google.com/file/d/1FTbIxETZ7RjuhxpHSZO8-puomnyNXUFB/view) · [Design report](report/SecureVault_Report.pdf) · [Design decisions](docs/DESIGN.md) · [Slides](slides/SecureVault.pdf)
 
 </div>
